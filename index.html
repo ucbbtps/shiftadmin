@@ -29,7 +29,7 @@ td.c{height:38px;min-width:34px;font-weight:600;cursor:pointer;user-select:none}
 <div id="app"></div><div id="toast"></div>
 <script>
 // Paste your own values from Supabase > Project Settings > API
-const API_URL='https://YOUR-PROJECT.supabase.co', API_KEY='YOUR-ANON-PUBLIC-KEY';
+const API_URL='https://kieybwjygrruwnkzkzcr.supabase.co', API_KEY='sb_publishable_9mVZw4NnDnMABISqq7M0qw_W-ov15WY';
 const CODES=['','P','A','CL','CH','EL','CML','HPL','RH','UJP','WO'];
 const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hm=t=>new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
@@ -37,7 +37,7 @@ const n=new Date();let ym=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,
 let me=JSON.parse(sessionStorage.getItem('sa')||'null'),tab='mine',D=null,tt;
 const out=h=>{$('#app').innerHTML=head()+h};
 function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(tt);tt=setTimeout(()=>t.style.display='none',3500)}
-async function rpc(fn,a){try{const r=await fetch(`${API_URL}/rest/v1/rpc/${fn}`,{method:'POST',headers:{apikey:API_KEY,Authorization:'Bearer '+API_KEY,'Content-Type':'application/json'},body:JSON.stringify(a)});const j=await r.json();return r.ok?j:{error:j.message||'Request failed'}}catch(e){return{error:'Network error. Check your connection.'}}}
+async function rpc(fn,a){if(API_URL.includes('YOUR-PROJECT')||API_KEY.includes('YOUR-ANON'))return{error:'Set API_URL and API_KEY at the top of index.html, then upload it again.'};try{const r=await fetch(`${API_URL}/rest/v1/rpc/${fn}`,{method:'POST',headers:{apikey:API_KEY,Authorization:'Bearer '+API_KEY,'Content-Type':'application/json'},body:JSON.stringify(a)});const j=await r.json();return r.ok?j:{error:j.message||'Request failed'}}catch(e){return{error:'Could not reach '+API_URL+'. Check that API_URL is correct and the project is not paused.'}}}
 const cr=()=>({p_code:me.code,p_pin:me.pin});
 
 function head(){if(!me)return '<h1>Shift Admin</h1>';
