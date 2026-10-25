@@ -41,7 +41,7 @@ async function rpc(fn,a){try{const r=await fetch(`${API_URL}/rest/v1/rpc/${fn}`,
 const cr=()=>({p_code:me.code,p_pin:me.pin});
 
 function head(){if(!me)return '<h1>Shift Admin</h1>';
- const T=me.admin?[['reg','Register'],['xd','Extra duty'],['ch','CH register'],['emps','Employees'],['off','Office'],['mine','My check-in']]:[];
+ const T=me.admin?[['reg','Register'],['xd','Extra duty'],['ch','CH register'],['bal','Balances'],['sm','Summary'],['emps','Employees'],['off','Office'],['mine','My check-in']]:[];
  return `<div class="bar"><h1 style="flex:2">Shift Admin</h1><button id="lo">Log out</button></div>${T.length?'<div class="tabs">'+T.map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?'on':''}">${t[1]}</button>`).join('')+'</div>':''}`}
 document.addEventListener('click',e=>{if(e.target.id==='lo'){sessionStorage.removeItem('sa');me=null;render()}const t=e.target.dataset.t;if(t){tab=t;render()}});
 
@@ -53,9 +53,9 @@ function loginView(){out(`<div class="card"><h2>Log in</h2><div class="bar"><inp
 
 const pos=()=>new Promise((ok,no)=>navigator.geolocation.getCurrentPosition(ok,no,{enableHighAccuracy:true,timeout:15000,maximumAge:0}));
 async function mine(){const r=await rpc('my_month',{...cr(),p_month:ym});if(r.error)return out(`<p class="err">${esc(r.error)}</p>`);
- const t=r.rows.find(x=>x.day===r.today)||{};
+ const t=r.rows.find(x=>x.day===r.today)||{};const b=await rpc('my_balance',{...cr(),p_year:+r.today.slice(0,4)});
  out(`<div class="card"><h2>${esc(me.name)}</h2><p class="mu">Today ${r.today}, shift ${SHN[shiftOf(r.offset,r.today)]}: ${esc(t.status||'not marked')}${t.check_in?', in '+hm(t.check_in):''}${t.check_out?', out '+hm(t.check_out):''}</p><button class="big pri" id="ci">Check in</button><button class="big" id="co">Check out</button><p class="mu" id="gm"></p><label class="mu"><input type="checkbox" id="au" ${localStorage.getItem('auto')==='off'?'':'checked'}> Check in automatically when I arrive. Keep this page open.</label></div>
- <div class="card"><b>This month</b>${r.rows.map(x=>`<div class="row"><span>${x.day.slice(8)}/${x.day.slice(5,7)}</span><span>${esc(x.status)}</span><span class="mu">${x.check_in?hm(x.check_in):''}${x.check_out?' to '+hm(x.check_out):''}</span></div>`).join('')||'<p class="mu">No records yet.</p>'}</div>`);
+ ${balCard(b,r.today.slice(0,4))}<div class="card"><b>This month</b>${r.rows.map(x=>`<div class="row"><span>${x.day.slice(8)}/${x.day.slice(5,7)}</span><span>${esc(x.status)}</span><span class="mu">${x.check_in?hm(x.check_in):''}${x.check_out?' to '+hm(x.check_out):''}</span></div>`).join('')||'<p class="mu">No records yet.</p>'}</div>`);
  const go=async k=>{const g=$('#gm');g.textContent='Getting your location...';let p;try{p=await pos()}catch(e){g.textContent='Could not get your location. Allow location access for this site and try again.';return}
   const x=await rpc('check_in_out',{...cr(),p_kind:k,p_lat:p.coords.latitude,p_lon:p.coords.longitude,p_acc:p.coords.accuracy});
   if(x.error){g.textContent=x.error;return}g.textContent=(k==='in'?'Checked in':'Checked out')+'. You are '+Math.round(x.dist)+' m from the office.';setTimeout(mine,1500);return true};
@@ -121,6 +121,21 @@ async function chv(){if(!await load())return;
  $('#ca').onclick=async()=>{const r=await rpc('admin_ch_add',{...cr(),p_emp:$('#ce').value,p_occasion:$('#co').value,p_odate:$('#cod').value||null,p_cdate:$('#cdd').value||null});if(r.error)return toast(r.error);toast('CH credited');chv()};
  $('#app').onclick=async e=>{const id=e.target.dataset.cd;if(!id)return;if(armed!==id){armed=id;chv();return}armed='';const r=await rpc('admin_ch_del',{...cr(),p_id:id});if(r.error)toast(r.error);chv()}}
 
-function render(){stopWatch();$('#app').onclick=null;if(!me)return loginView();if(!me.admin)tab='mine';({reg,xd,ch:chv,emps,off,mine})[tab]()}
+const LV=['CL','RH','EL','CML','HPL','CH','UJP'];
+function balTable(b){return `<table><tr><th class="nm" style="position:static">Leave</th><th>Credited</th><th>Used</th><th>Balance</th></tr>${LV.map(k=>{const x=b[k];return `<tr><td class="nm" style="position:static">${k}</td><td style="padding:8px 6px">${x[0]??'-'}</td><td>${x[1]}</td><td style="font-weight:700;${typeof x[2]==='number'&&x[2]<0?'color:#b3261e':''}">${x[2]??'No limit'}</td></tr>`}).join('')}</table>`}
+const balCard=(b,y)=>b&&!b.error?`<div class="card"><b>Leave balance ${y}</b><div class="wrap" style="margin-top:6px">${balTable(b)}</div><p class="mu">Next CH expiry: ${b.nx||'none'}. CL and RH reset each 1 Jan. EL and CML carry forward. Each HPL day uses half a CML.</p></div>`:'';
+let by=new Date().getFullYear(),sp='month';
+async function bal(){if(!await load())return;const r=await rpc('admin_bal',{...cr(),p_year:by});if(r.error)return out(`<p class="err">${esc(r.error)}</p>`);
+ out(`<div class="bar"><label class="mu">Year <input type="number" id="by" value="${by}"></label></div><p class="mu">CL 15 and RH 2 are credited each 1 Jan and reset yearly. EL 30 is credited each 1 Jan and carries forward. CML 10 is credited on the 1st of each employee's joining month every year and carries forward. 1 CML = 2 HPL. Set each joining date in Employees.</p>${r.map(x=>{const e=D.emps.find(z=>z.id===x.id)||{},ad=x.bal.adj||{};return `<div class="card"><b>${esc(e.name)}</b> <span class="mu">${esc(e.code)}${e.doj?', joined '+e.doj:', no joining date'}</span><div class="wrap" style="margin-top:6px">${balTable(x.bal)}</div><div class="mu" style="margin-top:8px">Opening adjustment (+/-), added to the balance. CL, RH, CH and UJP apply to ${by} only. A UJP adjustment is added to days used. An HPL adjustment changes CML by half that amount.</div><div class="bar">${LV.map(k=>{const key=['CL','RH','CH','UJP'].includes(k)?k+'@'+by:k;return `<label class="mu">${k} <input type="number" step="0.5" data-ak="${x.id}|${key}" value="${ad[key]||0}" style="width:70px"></label>`}).join('')}</div></div>`}).join('')}`);
+ $('#by').onchange=e=>{const v=parseInt(e.target.value,10);if(v>2000){by=v;bal()}};
+ $('#app').onchange=async e=>{const t=e.target;if(!t.dataset.ak)return;const p=t.dataset.ak.split('|'),v=parseFloat(t.value);if(isNaN(v))return;const q=await rpc('admin_adj',{...cr(),p_emp:p[0],p_key:p[1],p_val:v});if(q.error)toast(q.error);else bal()}}
+
+async function sm(){if(!await load())return;const Y=+ym.slice(0,4),M=+ym.slice(5),f=sp==='month'?ym+'-01':Y+'-01-01',t=sp==='month'?ym+'-'+String(new Date(Y,M,0).getDate()).padStart(2,'0'):Y+'-12-31';
+ const r=await rpc('admin_counts',{...cr(),p_from:f,p_to:t});if(r.error)return out(`<p class="err">${esc(r.error)}</p>`);
+ const C={};r.forEach(x=>{(C[x.emp]=C[x.emp]||{})[x.st]=x.n});const K=['P','A','CL','CH','EL','CML','HPL','RH','UJP'],LK=K.slice(2);
+ out(`<div class="bar"><input type="month" id="ym" value="${ym}"><select id="sp"><option value="month" ${sp==='month'?'selected':''}>Month</option><option value="year" ${sp==='year'?'selected':''}>Full year</option></select></div><div class="wrap"><table><tr><th class="nm">Employee</th>${K.map(k=>`<th>${k}</th>`).join('')}<th>Leave</th><th>Att %</th></tr>${D.emps.filter(e=>e.active).map(e=>{const c=C[e.id]||{},lv=LK.reduce((a,k)=>a+(c[k]||0),0),den=(c.P||0)+(c.A||0)+lv;return `<tr><td class="nm">${esc(e.name)}</td>${K.map(k=>`<td style="padding:8px 6px">${c[k]||'.'}</td>`).join('')}<td><b>${lv}</b></td><td>${den?Math.round((c.P||0)/den*100)+'%':'-'}</td></tr>`}).join('')}</table></div><p class="mu">Att % = Present / (Present + Absent + all leave days). Weekly Off and unmarked days are not counted.</p>`);
+ $('#ym').onchange=e=>{if(e.target.value){ym=e.target.value;sm()}};$('#sp').onchange=e=>{sp=e.target.value;sm()}}
+
+function render(){stopWatch();$('#app').onclick=null;$('#app').onchange=null;if(!me)return loginView();if(!me.admin)tab='mine';({reg,xd,ch:chv,bal,sm,emps,off,mine})[tab]()}
 render();
 </script></body></html>
