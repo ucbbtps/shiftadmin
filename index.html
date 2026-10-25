@@ -22,14 +22,15 @@ table{border-collapse:separate;border-spacing:0;width:100%}
 th,td{border-bottom:1px solid var(--bd);border-right:1px solid var(--bd);text-align:center;font-size:12px;padding:0}
 th{padding:4px 0;color:var(--mu)}.nm{position:sticky;left:0;background:var(--card);text-align:left;padding:6px 10px;min-width:130px;white-space:nowrap;z-index:1}
 td.c{height:38px;min-width:34px;font-weight:600;cursor:pointer;user-select:none}
-.sP{background:var(--P)}.sA{background:var(--A)}.sL{background:var(--L)}.sWO{background:var(--WO)}:root{--hD:#b9f1f3;--hE:#e1c9f2;--hCS:#b5f5c0;--hN:#efd9b0;--hO:#e9ecec}@media(prefers-color-scheme:dark){:root{--hD:#17505a;--hE:#3d2a56;--hCS:#1c5030;--hN:#5a4423;--hO:#3a4140}}.hD{background:var(--hD)}.hE{background:var(--hE)}.hCS{background:var(--hCS)}.hN{background:var(--hN)}.hO{background:var(--hO)}.i{color:var(--mu);opacity:.55;font-weight:400}
+.sP{background:var(--P)}.sA{background:var(--A)}.sL{background:var(--L)}.sWO{background:var(--WO)}:root{--hD:#b9f1f3;--hE:#e1c9f2;--hCS:#b5f5c0;--hN:#efd9b0;--hO:#e9ecec}@media(prefers-color-scheme:dark){:root{--hD:#17505a;--hE:#3d2a56;--hCS:#1c5030;--hN:#5a4423;--hO:#3a4140}}.hD{background:var(--hD)}.hE{background:var(--hE)}.hCS{background:var(--hCS)}.hN{background:var(--hN)}.hO{background:var(--hO)}.i{color:var(--mu);opacity:.55;font-weight:400}.x{outline:2px solid var(--ac);outline-offset:-2px;font-size:11px;white-space:nowrap}
 .row{display:flex;gap:8px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)}.row:last-child{border:0}
-#toast{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));background:var(--tx);color:var(--bg);padding:10px 14px;border-radius:10px;display:none}
+#toast{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));background:var(--tx);color:var(--bg);padding:10px 14px;border-radius:10px;display:none;z-index:30}
 </style></head><body>
 <div id="app"></div><div id="toast"></div>
+<script src="config.js"></script>
 <script>
 // Paste your own values from Supabase > Project Settings > API
-const API_URL='https://kieybwjygrruwnkzkzcr.supabase.co', API_KEY='sb_publishable_9mVZw4NnDnMABISqq7M0qw_W-ov15WY';
+const API_URL=(window.CONFIG||{}).url||'https://YOUR-PROJECT.supabase.co', API_KEY=(window.CONFIG||{}).key||'YOUR-ANON-PUBLIC-KEY';
 const CODES=['','P','A','CL','CH','EL','CML','HPL','RH','UJP','WO'];
 const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hm=t=>new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
@@ -41,7 +42,7 @@ async function rpc(fn,a){if(API_URL.includes('YOUR-PROJECT')||API_KEY.includes('
 const cr=()=>({p_code:me.code,p_pin:me.pin});
 
 function head(){if(!me)return '<h1>Shift Admin</h1>';
- const T=me.admin?[['reg','Register'],['xd','Extra duty'],['ch','CH register'],['bal','Balances'],['sm','Summary'],['emps','Employees'],['off','Office'],['mine','My check-in']]:[];
+ const T=me.admin?[['reg','Register'],['ch','CH register'],['bal','Balances'],['sm','Summary'],['emps','Employees'],['off','Office'],['mine','My check-in']]:[];
  return `<div class="bar"><h1 style="flex:2">Shift Admin</h1><button id="lo">Log out</button></div>${T.length?'<div class="tabs">'+T.map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?'on':''}">${t[1]}</button>`).join('')+'</div>':''}`}
 document.addEventListener('click',e=>{if(e.target.id==='lo'){sessionStorage.removeItem('sa');me=null;render()}const t=e.target.dataset.t;if(t){tab=t;render()}});
 
@@ -62,20 +63,18 @@ async function mine(){const r=await rpc('my_month',{...cr(),p_month:ym});if(r.er
  $('#ci').onclick=()=>go('in');$('#co').onclick=()=>go('out');$('#au').onchange=e=>{localStorage.setItem('auto',e.target.checked?'on':'off');mine()};if(!t.check_in&&$('#au').checked)watch(r.office,go)}
 
 async function load(){D=await rpc('admin_data',{...cr(),p_month:ym});if(D.error){out(`<p class="err">${esc(D.error)}</p>`);return false}return true}
-async function reg(){if(await load())draw()}
-function draw(){const[y,m]=ym.split('-').map(Number),days=new Date(y,m,0).getDate(),A={};D.att.forEach(a=>A[a.emp+'|'+a.day]=a);
- let h=`<div class="bar"><input type="month" id="ym" value="${ym}"></div><p class="mu">Tap a cell to cycle: blank, P, A, CL, CH, EL, CML, HPL, RH, UJP, WO. A check-in marks P automatically. Grey letters are the planned shift. When the employee is present, the letter turns colored.</p><div class="bar mu" style="gap:6px">${['D','E','CS','N','O'].map(x=>`<span class="h${x}" style="padding:2px 8px;border-radius:6px;flex:0 0 auto">${SHN[x]}</span>`).join('')}</div><div class="wrap"><table id="g"><tr><th class="nm">Employee</th>`;
+let X=[];async function reg(){if(!await load())return;const r=await rpc('admin_extras',{...cr(),p_month:ym});X=Array.isArray(r)?r:[];draw()}
+function draw(){const[y,m]=ym.split('-').map(Number),days=new Date(y,m,0).getDate(),A={};D.att.forEach(a=>A[a.emp+'|'+a.day]=a);const XM={};X.forEach(x=>XM[x.emp+'|'+x.day]=x);
+ let h=`<div class="bar"><input type="month" id="ym" value="${ym}"></div><p class="mu">Tap a cell to choose a status from a menu. An outlined cell such as D+N is the planned shift plus an extra shift. A check-in marks P automatically. Grey letters are the planned shift. When the employee is present, the letter turns colored.</p><div class="bar mu" style="gap:6px">${['D','E','CS','N','O'].map(x=>`<span class="h${x}" style="padding:2px 8px;border-radius:6px;flex:0 0 auto">${SHN[x]}</span>`).join('')}</div><div class="wrap"><table id="g"><tr><th class="nm">Employee</th>`;
  for(let d=1;d<=days;d++)h+=`<th>${d}</th>`;h+='</tr>';
  D.emps.filter(e=>e.active).forEach(e=>{h+=`<tr><td class="nm">${esc(e.name)}<div class="mu">${esc([e.code,e.designation,e.grp].filter(Boolean).join(', '))}</div></td>`;
-  for(let d=1;d<=days;d++){const ds=ym+'-'+String(d).padStart(2,'0'),k=e.id+'|'+ds,a=A[k],s=a?a.status:'',sh=shiftOf(e.offset,ds),c=s==='P'?'h'+sh:s==='A'?'sA':s==='WO'?'sWO':s?'sL':'i',tx=s&&s!=='P'?s:SHL[sh];
+  for(let d=1;d<=days;d++){const ds=ym+'-'+String(d).padStart(2,'0'),k=e.id+'|'+ds,a=A[k],xe=XM[k],s=a?a.status:'',sh=shiftOf(e.offset,ds),c=(s==='P'?'h'+sh:s==='A'?'sA':s==='WO'?'sWO':s?'sL':'i')+(xe?' x':''),tx=xe?SHL[sh]+'+'+(SHL[xe.shift]||'X'):s&&s!=='P'?s:SHL[sh];
    h+=`<td class="c ${c}" data-k="${k}" title="${a&&a.check_in?'In '+hm(a.check_in)+(a.dist!=null?' ('+a.dist+' m)':''):''}">${tx}</td>`}h+='</tr>'});
  const td=D.att.filter(a=>a.day===D.today&&a.check_in);
  h+=`</table></div><div class="card" style="margin-top:12px"><b>Today's check-ins (${td.length})</b>${td.map(a=>{const e=D.emps.find(x=>x.id===a.emp);return `<div class="row"><span>${esc(e?e.name:'')}</span><span class="mu">in ${hm(a.check_in)}${a.check_out?', out '+hm(a.check_out):''}, ${a.dist} m</span></div>`}).join('')||'<p class="mu">Nobody yet.</p>'}</div>`;
  out(h);
  $('#ym').onchange=e=>{if(e.target.value){ym=e.target.value;reg()}};
- $('#g').onclick=async e=>{const c=e.target.closest('td.c');if(!c)return;const k=c.dataset.k,p=k.split('|'),cur=(A[k]||{}).status||'',nx=CODES[(CODES.indexOf(cur)+1)%CODES.length];
-  const r=await rpc('admin_set',{...cr(),p_emp:p[0],p_day:p[1],p_status:nx});if(r.error)return toast(r.error);
-  if(!nx)D.att=D.att.filter(a=>!(a.emp===p[0]&&a.day===p[1]));else if(A[k])A[k].status=nx;else D.att.push({emp:p[0],day:p[1],status:nx});if(nx==='CH'||cur==='CH')reg();else draw()}}
+ $('#g').onclick=e=>{const c=e.target.closest('td.c');if(c)pick(c.dataset.k)}}
 
 async function emps(sel){if(!D&&!await load())return;if(!sel&&!await load())return;const e=D.emps.find(x=>x.id===sel)||{};
  out(`<div class="card"><h2>${e.id?'Edit employee':'Add employee'}</h2><div class="bar"><input id="f1" placeholder="Employee code" value="${esc(e.code)}"><input id="f2" placeholder="Name" value="${esc(e.name)}"></div><div class="bar"><input id="f3" placeholder="Designation" value="${esc(e.designation)}"><input id="f4" placeholder="Group or shift" value="${esc(e.grp)}"></div><div class="bar"><label class="mu">Joining date <input type="date" id="f5" value="${e.doj||''}"></label><input id="f6" inputmode="numeric" placeholder="${e.id?'New PIN (leave blank to keep)':'PIN'}"></div><div class="bar"><label class="mu">Shift cycle offset, 0 to 7 (0 follows the shift calendar) <input type="number" id="f9" min="0" max="7" value="${e.offset||0}"></label></div><div class="bar"><label><input type="checkbox" id="f7" ${e.is_admin?'checked':''}> Admin</label><label><input type="checkbox" id="f8" ${e.id&&!e.active?'':'checked'}> Active</label></div><div class="bar"><button class="pri" id="sv">Save employee</button>${e.id?'<button id="nw">Add a new one</button>':''}</div></div>
@@ -108,12 +107,13 @@ function watch(o,go){const g=$('#gm');if(!o||o.lat==null){g.textContent='Office 
   ()=>{g.textContent='Location is blocked. Allow location access to check in automatically.'},{enableHighAccuracy:true,maximumAge:5000})}
 
 const opts=()=>D.emps.filter(e=>e.active).map(e=>`<option value="${e.id}">${esc(e.name)} (${esc(e.code)})</option>`).join('');
-async function xd(){if(!await load())return;
- out(`<div class="card"><h2>Extra duty</h2><p class="mu">Record a day an employee worked extra. One CH is credited to the employee automatically, up to 15 CH a year.</p><div class="bar"><select id="xe">${opts()}</select><input type="date" id="xdt" value="${D.today}"><input id="xn" placeholder="Note (optional)"></div><button class="pri" id="xa">Add extra duty</button></div>
- <div class="bar"><input type="month" id="ym" value="${ym}"></div><div class="card"><b>Extra duty in ${ym}</b>${D.extra.map(x=>{const e=D.emps.find(z=>z.id===x.emp)||{};return `<div class="row"><span>${esc(e.name)}<div class="mu">${x.day}${x.note?', '+esc(x.note):''}, ${x.credited?'1 CH credited':'no CH credited'}</div></span><button data-xd="${x.id}">${armed===x.id?'Confirm':'Delete'}</button></div>`}).join('')||'<p class="mu">None this month.</p>'}</div>`);
- $('#ym').onchange=e=>{if(e.target.value){ym=e.target.value;xd()}};
- $('#xa').onclick=async()=>{const r=await rpc('admin_extra_add',{...cr(),p_emp:$('#xe').value,p_day:$('#xdt').value,p_note:$('#xn').value});if(r.error)return toast(r.error);toast(r.credited?'Extra duty added. 1 CH credited.':'Extra duty added. No CH credited because the limit of 15 a year is reached.');xd()};
- $('#app').onclick=async e=>{const id=e.target.dataset.xd;if(!id)return;if(armed!==id){armed=id;xd();return}armed='';const r=await rpc('admin_extra_del',{...cr(),p_id:id});if(r.error)toast(r.error);xd()}}
+function pick(k){const p=k.split('|'),e=D.emps.find(z=>z.id===p[0]),a=D.att.find(z=>z.emp===p[0]&&z.day===p[1]),x=X.find(z=>z.emp===p[0]&&z.day===p[1]),cur=x?'XD':(a?a.status:''),O=[['','Clear'],['P','Present'],['A','Absent'],['CL','CL'],['CH','CH'],['EL','EL'],['CML','CML'],['HPL','HPL'],['RH','RH'],['UJP','UJP'],['WO','Weekly Off'],['XD','Extra duty']];
+ const m=document.createElement('div');m.style.cssText='position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20';
+ m.innerHTML=`<div class="card" style="width:100%;max-width:420px;margin:0 0 env(safe-area-inset-bottom)"><b>${esc(e.name)}</b><div class="mu">${p[1]}, planned shift ${SHN[shiftOf(e.offset,p[1])]}</div><div class="bar" style="margin-top:10px"><select id="ps">${O.map(o=>`<option value="${o[0]}" ${o[0]===cur?'selected':''}>${o[1]}</option>`).join('')}</select><select id="px">${['D','E','CS','N'].map(c=>`<option value="${c}" ${x&&x.shift===c?'selected':''}>${SHN[c]} shift</option>`).join('')}</select></div><p class="mu" id="pn"></p><div class="bar"><button class="pri" id="psv">Save</button><button id="pcx">Cancel</button></div></div>`;
+ document.body.appendChild(m);
+ const sy=()=>{const v=$('#ps').value==='XD';$('#px').style.display=v?'':'none';$('#pn').textContent=v?'Choose the extra shift worked. 1 CH is credited automatically.':''};
+ $('#ps').onchange=sy;sy();$('#pcx').onclick=()=>m.remove();m.onclick=ev=>{if(ev.target===m)m.remove()};
+ $('#psv').onclick=async()=>{const v=$('#ps').value,r=await rpc('admin_cell',{...cr(),p_emp:p[0],p_day:p[1],p_status:v,p_xshift:v==='XD'?$('#px').value:null});if(r.error)return toast(r.error);m.remove();if(v==='XD'&&!r.changed)toast(r.credited?'Extra duty saved. 1 CH credited.':'Extra duty saved. No CH credited because the limit of 15 a year is reached.');reg()}}
 
 async function chv(){if(!await load())return;
  out(`<div class="card"><h2>Credit CH</h2><div class="bar"><select id="ce">${opts()}</select><input id="co" placeholder="Occasion"><label class="mu">Date of occasion <input type="date" id="cod"></label><label class="mu">Date of credit <input type="date" id="cdd" value="${D.today}"></label></div><button class="pri" id="ca">Credit CH</button><p class="mu">Maximum 15 CH per employee per year, counted by date of credit. Each CH expires 3 months after its date of credit. When CH is marked in the Register, the oldest available CH is used first.</p></div>
@@ -136,6 +136,6 @@ async function sm(){if(!await load())return;const Y=+ym.slice(0,4),M=+ym.slice(5
  out(`<div class="bar"><input type="month" id="ym" value="${ym}"><select id="sp"><option value="month" ${sp==='month'?'selected':''}>Month</option><option value="year" ${sp==='year'?'selected':''}>Full year</option></select></div><div class="wrap"><table><tr><th class="nm">Employee</th>${K.map(k=>`<th>${k}</th>`).join('')}<th>Leave</th><th>Att %</th></tr>${D.emps.filter(e=>e.active).map(e=>{const c=C[e.id]||{},lv=LK.reduce((a,k)=>a+(c[k]||0),0),den=(c.P||0)+(c.A||0)+lv;return `<tr><td class="nm">${esc(e.name)}</td>${K.map(k=>`<td style="padding:8px 6px">${c[k]||'.'}</td>`).join('')}<td><b>${lv}</b></td><td>${den?Math.round((c.P||0)/den*100)+'%':'-'}</td></tr>`}).join('')}</table></div><p class="mu">Att % = Present / (Present + Absent + all leave days). Weekly Off and unmarked days are not counted.</p>`);
  $('#ym').onchange=e=>{if(e.target.value){ym=e.target.value;sm()}};$('#sp').onchange=e=>{sp=e.target.value;sm()}}
 
-function render(){stopWatch();$('#app').onclick=null;$('#app').onchange=null;if(!me)return loginView();if(!me.admin)tab='mine';({reg,xd,ch:chv,bal,sm,emps,off,mine})[tab]()}
+function render(){stopWatch();$('#app').onclick=null;$('#app').onchange=null;if(!me)return loginView();if(!me.admin)tab='mine';({reg,ch:chv,bal,sm,emps,off,mine})[tab]()}
 render();
 </script></body></html>
