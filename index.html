@@ -63,8 +63,8 @@ async function mine(){const r=await rpc('my_month',{...cr(),p_month:ym});if(r.er
  $('#ci').onclick=()=>go('in');$('#co').onclick=()=>go('out');$('#au').onchange=e=>{localStorage.setItem('auto',e.target.checked?'on':'off');mine()};if(!t.check_in&&$('#au').checked)watch(r.office,go)}
 
 async function load(){D=await rpc('admin_data',{...cr(),p_month:ym});if(D.error){out(`<p class="err">${esc(D.error)}</p>`);return false}return true}
-let X=[];async function reg(){if(!await load())return;const r=await rpc('admin_extras',{...cr(),p_month:ym});X=Array.isArray(r)?r:[];draw()}
-function draw(){const[y,m]=ym.split('-').map(Number),days=new Date(y,m,0).getDate(),A={};D.att.forEach(a=>A[a.emp+'|'+a.day]=a);const XM={};X.forEach(x=>XM[x.emp+'|'+x.day]=x);
+let X=[],rm='';async function reg(){if(!await load())return;const r=await rpc('admin_extras',{...cr(),p_month:ym});X=Array.isArray(r)?r:[];draw()}
+function draw(){const w0=$('.wrap'),sl=w0?w0.scrollLeft:0,sy=window.scrollY,same=rm===ym;rm=ym;const[y,m]=ym.split('-').map(Number),days=new Date(y,m,0).getDate(),A={};D.att.forEach(a=>A[a.emp+'|'+a.day]=a);const XM={};X.forEach(x=>XM[x.emp+'|'+x.day]=x);
  let h=`<div class="bar"><input type="month" id="ym" value="${ym}"></div><p class="mu">Tap a cell to choose a status from a menu. An outlined cell such as D+N is the planned shift plus an extra shift. A check-in marks P automatically. Grey letters are the planned shift. When the employee is present, the letter turns colored.</p><div class="bar mu" style="gap:6px">${['D','E','CS','N','O'].map(x=>`<span class="h${x}" style="padding:2px 8px;border-radius:6px;flex:0 0 auto">${SHN[x]}</span>`).join('')}</div><div class="wrap"><table id="g"><tr><th class="nm">Employee</th>`;
  for(let d=1;d<=days;d++)h+=`<th>${d}</th>`;h+='</tr>';
  D.emps.filter(e=>e.active).forEach(e=>{h+=`<tr><td class="nm">${esc(e.name)}<div class="mu">${esc([e.code,e.designation,e.grp].filter(Boolean).join(', '))}</div></td>`;
@@ -72,7 +72,7 @@ function draw(){const[y,m]=ym.split('-').map(Number),days=new Date(y,m,0).getDat
    h+=`<td class="c ${c}" data-k="${k}" title="${a&&a.check_in?'In '+hm(a.check_in)+(a.dist!=null?' ('+a.dist+' m)':''):''}">${tx}</td>`}h+='</tr>'});
  const td=D.att.filter(a=>a.day===D.today&&a.check_in);
  h+=`</table></div><div class="card" style="margin-top:12px"><b>Today's check-ins (${td.length})</b>${td.map(a=>{const e=D.emps.find(x=>x.id===a.emp);return `<div class="row"><span>${esc(e?e.name:'')}</span><span class="mu">in ${hm(a.check_in)}${a.check_out?', out '+hm(a.check_out):''}, ${a.dist} m</span></div>`}).join('')||'<p class="mu">Nobody yet.</p>'}</div>`;
- out(h);
+ out(h);if(same){const w1=$('.wrap');if(w1)w1.scrollLeft=sl;window.scrollTo(0,sy)}
  $('#ym').onchange=e=>{if(e.target.value){ym=e.target.value;reg()}};
  $('#g').onclick=e=>{const c=e.target.closest('td.c');if(c)pick(c.dataset.k)}}
 
@@ -136,6 +136,6 @@ async function sm(){if(!await load())return;const Y=+ym.slice(0,4),M=+ym.slice(5
  out(`<div class="bar"><input type="month" id="ym" value="${ym}"><select id="sp"><option value="month" ${sp==='month'?'selected':''}>Month</option><option value="year" ${sp==='year'?'selected':''}>Full year</option></select></div><div class="wrap"><table><tr><th class="nm">Employee</th>${K.map(k=>`<th>${k}</th>`).join('')}<th>Leave</th><th>Att %</th></tr>${D.emps.filter(e=>e.active).map(e=>{const c=C[e.id]||{},lv=LK.reduce((a,k)=>a+(c[k]||0),0),den=(c.P||0)+(c.A||0)+lv;return `<tr><td class="nm">${esc(e.name)}</td>${K.map(k=>`<td style="padding:8px 6px">${c[k]||'.'}</td>`).join('')}<td><b>${lv}</b></td><td>${den?Math.round((c.P||0)/den*100)+'%':'-'}</td></tr>`}).join('')}</table></div><p class="mu">Att % = Present / (Present + Absent + all leave days). Weekly Off and unmarked days are not counted.</p>`);
  $('#ym').onchange=e=>{if(e.target.value){ym=e.target.value;sm()}};$('#sp').onchange=e=>{sp=e.target.value;sm()}}
 
-function render(){stopWatch();$('#app').onclick=null;$('#app').onchange=null;if(!me)return loginView();if(!me.admin)tab='mine';({reg,ch:chv,bal,sm,emps,off,mine})[tab]()}
+function render(){stopWatch();$('#app').onclick=null;$('#app').onchange=null;rm='';if(!me)return loginView();if(!me.admin)tab='mine';({reg,ch:chv,bal,sm,emps,off,mine})[tab]()}
 render();
 </script></body></html>
