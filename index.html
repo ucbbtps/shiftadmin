@@ -150,5 +150,5 @@ async function sm(){if(!await load())return;const Y=+ym.slice(0,4),M=+ym.slice(5
  $('#ym').onchange=e=>{if(e.target.value){ym=e.target.value;sm()}};$('#sp').onchange=e=>{sp=e.target.value;sm()}}
 
 function render(){stopWatch();$('#app').onclick=null;$('#app').onchange=null;rm='';if(!me)return loginView();if(!me.admin)tab='mine';({reg,ch:chv,bal,sm,emps,off,mine})[tab]()}
-render();
+(async()=>{if(!me&&window.Native){try{const c=JSON.parse(Native.creds()),r=await rpc('login',{p_code:c.code,p_pin:c.pin});if(!r.error){me={code:r.code,pin:c.pin,name:r.name,admin:r.admin};sessionStorage.setItem('sa',JSON.stringify(me));tab=me.admin?'reg':'mine'}}catch(e){}}render()})();
 </script></body></html>
