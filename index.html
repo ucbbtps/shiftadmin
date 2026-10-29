@@ -43,7 +43,7 @@ const cr=()=>({p_code:me.code,p_pin:me.pin});
 
 function head(){if(!me)return '<h1>Shift Admin</h1>';
  const T=me.admin?[['reg','Register'],['ch','CH register'],['bal','Balances'],['sm','Summary'],['emps','Employees'],['off','Office'],['mine','My check-in']]:[];
- return `<div class="bar"><h1 style="flex:2">Shift Admin</h1><button id="lo">Log out</button></div>${T.length?'<div class="tabs">'+T.map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?'on':''}">${t[1]}</button>`).join('')+'</div>':''}`}
+ return `${window.Native?'':'<div class="bar"><h1 style="flex:2">Shift Admin</h1><button id="lo">Log out</button></div>'}${T.length?'<div class="tabs">'+T.map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?'on':''}">${t[1]}</button>`).join('')+'</div>':''}`}
 document.addEventListener('click',e=>{if(e.target.id==='lo'){sessionStorage.removeItem('sa');me=null;render()}const t=e.target.dataset.t;if(t){tab=t;render()}});
 
 function loginView(){out(`<div class="card"><h2>Log in</h2><div class="bar"><input id="c" placeholder="Employee code" autocomplete="username" autocapitalize="characters"><input id="p" type="password" inputmode="numeric" placeholder="PIN" autocomplete="current-password"></div><button class="pri big" id="go" style="margin-top:0">Log in</button><p class="err" id="e"></p></div>`);
@@ -150,5 +150,5 @@ async function sm(){if(!await load())return;const Y=+ym.slice(0,4),M=+ym.slice(5
  $('#ym').onchange=e=>{if(e.target.value){ym=e.target.value;sm()}};$('#sp').onchange=e=>{sp=e.target.value;sm()}}
 
 function render(){stopWatch();$('#app').onclick=null;$('#app').onchange=null;rm='';if(!me)return loginView();if(!me.admin)tab='mine';({reg,ch:chv,bal,sm,emps,off,mine})[tab]()}
-(async()=>{if(!me&&window.Native){try{const c=JSON.parse(Native.creds()),r=await rpc('login',{p_code:c.code,p_pin:c.pin});if(!r.error){me={code:r.code,pin:c.pin,name:r.name,admin:r.admin};sessionStorage.setItem('sa',JSON.stringify(me));tab=me.admin?'reg':'mine'}}catch(e){}}render()})();
+(async()=>{if(!me&&window.Native){try{const c=JSON.parse(Native.creds()),r=await rpc('login',{p_code:c.code,p_pin:c.pin});if(!r.error){me={code:r.code,pin:c.pin,name:r.name,admin:r.admin};sessionStorage.setItem('sa',JSON.stringify(me));tab=me.admin?'reg':'mine'}else if(/Invalid code/.test(r.error)){Native.logout();return}else{$('#app').innerHTML='<p class="err" style="padding:16px">'+esc(r.error)+'</p>';return}}catch(e){}}render()})();
 </script></body></html>
