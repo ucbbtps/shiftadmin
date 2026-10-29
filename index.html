@@ -25,6 +25,16 @@ td.c{height:38px;min-width:34px;font-weight:600;cursor:pointer;user-select:none}
 .sP{background:var(--P)}.sA{background:var(--A)}.sL{background:var(--L)}.sWO{background:var(--WO)}:root{--hD:#b9f1f3;--hE:#e1c9f2;--hCS:#b5f5c0;--hN:#efd9b0;--hO:#e9ecec}@media(prefers-color-scheme:dark){:root{--hD:#17505a;--hE:#3d2a56;--hCS:#1c5030;--hN:#5a4423;--hO:#3a4140}}.hD{background:var(--hD)}.hE{background:var(--hE)}.hCS{background:var(--hCS)}.hN{background:var(--hN)}.hO{background:var(--hO)}.i{color:var(--mu);opacity:.55;font-weight:400}.x{outline:2px solid var(--ac);outline-offset:-2px;font-size:11px;white-space:nowrap}.o{text-decoration:underline}
 .row{display:flex;gap:8px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)}.row:last-child{border:0}
 #toast{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));background:var(--tx);color:var(--bg);padding:10px 14px;border-radius:10px;display:none;z-index:30}
+
+:root[data-theme="dark"]{--P:#1c3b2a;--A:#46252a;--L:#202f4c;--WO:#2a3331;--hD:#17505a;--hE:#3d2a56;--hCS:#1c5030;--hN:#5a4423;--hO:#3a4140}
+:root[data-theme="light"]{--P:#d5f0df;--A:#f8d9d9;--L:#dbe6f8;--WO:#e5e8e8;--hD:#b9f1f3;--hE:#e1c9f2;--hCS:#b5f5c0;--hN:#efd9b0;--hO:#e9ecec}
+body.nat{padding-top:8px}
+.nat .card,.nat .wrap{border:0;border-radius:20px}
+.nat input,.nat select,.nat button{border-radius:12px}
+.nat .pri,.nat .big{border-radius:16px}
+.nat .tabs{gap:8px;padding-bottom:2px}.nat .tabs button{flex:0 0 auto;border:0;border-radius:20px;padding:9px 16px;white-space:nowrap;background:var(--card)}
+.nat .tabs button.on{background:var(--ac);color:var(--bg)}
+.nat .pri{color:var(--bg)}
 </style></head><body>
 <div id="app"></div><div id="toast"></div>
 <script src="config.js"></script>
@@ -149,6 +159,7 @@ async function sm(){if(!await load())return;const Y=+ym.slice(0,4),M=+ym.slice(5
  out(`<div class="bar"><input type="month" id="ym" value="${ym}"><select id="sp"><option value="month" ${sp==='month'?'selected':''}>Month</option><option value="year" ${sp==='year'?'selected':''}>Full year</option></select></div><div class="wrap"><table><tr><th class="nm">Employee</th>${K.map(k=>`<th>${k}</th>`).join('')}<th>Leave</th><th>Att %</th></tr>${D.emps.filter(e=>e.active).map(e=>{const c=C[e.id]||{},lv=LK.reduce((a,k)=>a+(c[k]||0),0),den=(c.P||0)+(c.A||0)+lv;return `<tr><td class="nm">${esc(e.name)}</td>${K.map(k=>`<td style="padding:8px 6px">${c[k]||'.'}</td>`).join('')}<td><b>${lv}</b></td><td>${den?Math.round((c.P||0)/den*100)+'%':'-'}</td></tr>`}).join('')}</table></div><p class="mu">Att % = Present / (Present + Absent + all leave days). Weekly Off and unmarked days are not counted.</p>`);
  $('#ym').onchange=e=>{if(e.target.value){ym=e.target.value;sm()}};$('#sp').onchange=e=>{sp=e.target.value;sm()}}
 
-function render(){stopWatch();$('#app').onclick=null;$('#app').onchange=null;rm='';if(!me)return loginView();if(!me.admin)tab='mine';else if(window.Native&&tab==='mine')tab='reg';({reg,ch:chv,bal,sm,emps,off,mine})[tab]()}
+function applyTheme(){if(!window.Native)return;document.body.classList.add('nat');try{const t=JSON.parse(Native.theme()),r=document.documentElement;r.dataset.theme=t.dark?'dark':'light';['bg','card','tx','mu','bd','ac'].forEach(k=>r.style.setProperty('--'+k,t[k]))}catch(e){}}
+function render(){applyTheme();stopWatch();$('#app').onclick=null;$('#app').onchange=null;rm='';if(!me)return loginView();if(!me.admin)tab='mine';else if(window.Native&&tab==='mine')tab='reg';({reg,ch:chv,bal,sm,emps,off,mine})[tab]()}
 (async()=>{if(!me&&window.Native){try{const c=JSON.parse(Native.creds()),r=await rpc('login',{p_code:c.code,p_pin:c.pin});if(!r.error){me={code:r.code,pin:c.pin,name:r.name,admin:r.admin};sessionStorage.setItem('sa',JSON.stringify(me));tab=me.admin?'reg':'mine'}else if(/Invalid code/.test(r.error)){Native.logout();return}else{$('#app').innerHTML='<p class="err" style="padding:16px">'+esc(r.error)+'</p>';return}}catch(e){}}render()})();
 </script></body></html>
