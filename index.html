@@ -34,6 +34,12 @@ th.rh{background:var(--rhc)!important;color:#fff!important}
 td.gh{box-shadow:inset 2px 0 var(--ghc),inset -2px 0 var(--ghc)}
 td.rh{box-shadow:inset 2px 0 var(--rhc),inset -2px 0 var(--rhc)}
 th small{font-size:9px;font-weight:700}
+.lvg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:8px 0}
+.lvh{text-align:center;font-size:12px;color:var(--mu)}
+.lvd{aspect-ratio:1;border:0;border-radius:12px;color:#fff;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;line-height:1.1}
+.lvd small{font-size:10px;font-weight:600;opacity:.9}
+.lvd.lg{background:#2e9e5b}.lvd.lr{background:#e5484d}.lvd.on{outline:3px solid var(--tx)}
+.lvb{border:0;background:transparent}
 body.nat{padding-top:8px}
 .nat .card,.nat .wrap{border:0;border-radius:20px}
 .nat input,.nat select,.nat button{border-radius:12px}
@@ -58,7 +64,7 @@ async function rpc(fn,a){if(API_URL.includes('YOUR-PROJECT')||API_KEY.includes('
 const cr=()=>({p_code:me.code,p_pin:me.pin});
 
 function head(){if(!me)return '<h1>Shift Admin</h1>';
- const T=me.admin?[['reg','Register'],['ch','CH register'],['bal','Balances'],['sm','Summary'],['emps','Employees'],['hol','Holidays'],['off','Office']].concat(window.Native?[]:[['mine','My check-in']]):[];
+ const T=me.admin?[['reg','Register'],['ch','CH register'],['bal','Balances'],['sm','Summary'],['emps','Employees'],['hol','Holidays'],['lv','Leaves'],['off','Office']].concat(window.Native?[]:[['mine','My check-in']]):[];
  return `${window.Native?'':'<div class="bar"><h1 style="flex:2">Shift Admin</h1><button id="lo">Log out</button></div>'}${T.length?'<div class="tabs">'+T.map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?'on':''}">${t[1]}</button>`).join('')+'</div>':''}`}
 document.addEventListener('click',e=>{if(e.target.id==='lo'){sessionStorage.removeItem('sa');me=null;render()}const t=e.target.dataset.t;if(t){tab=t;render()}});
 
@@ -102,9 +108,9 @@ function draw(){const w0=$('.wrap'),sl=w0?w0.scrollLeft:0,sy=window.scrollY,same
  $('#rp').onchange=e=>{if(e.target.value){rp=e.target.value;reg()}};
  $('#g').onclick=e=>{const c=e.target.closest('td.c');if(c)pick(c.dataset.k)}}
 async function emps(sel){if(!D&&!await load())return;if(!sel&&!await load())return;const e=D.emps.find(x=>x.id===sel)||{};
- out(`<div class="card"><h2>${e.id?'Edit employee':'Add employee'}</h2><div class="bar"><input id="f1" placeholder="Employee code" value="${esc(e.code)}"><input id="f2" placeholder="Name" value="${esc(e.name)}"></div><div class="bar"><input id="f3" placeholder="Designation" value="${esc(e.designation)}"><input id="f4" placeholder="Group or shift" value="${esc(e.grp)}"></div><div class="bar"><label class="mu">Joining date <input type="date" id="f5" value="${e.doj||''}"></label><input id="f6" inputmode="numeric" placeholder="${e.id?'New PIN (leave blank to keep)':'PIN'}"></div><div class="bar"><label class="mu">Shift cycle offset, 0 to 7 (0 follows the shift calendar) <input type="number" id="f9" min="0" max="7" value="${e.offset||0}"></label></div><div class="bar"><label><input type="checkbox" id="f7" ${e.is_admin?'checked':''}> Admin</label><label><input type="checkbox" id="f8" ${e.id&&!e.active?'':'checked'}> Active</label></div><div class="bar"><button class="pri" id="sv">Save employee</button>${e.id?'<button id="nw">Add a new one</button>':''}</div></div>
- <div class="card"><b>Employees</b>${D.emps.map(x=>`<div class="row" data-e="${x.id}" style="cursor:pointer"><span>${esc(x.name)}<div class="mu">${esc([x.code,x.designation,x.grp].filter(Boolean).join(', '))}</div></span><span class="mu">${x.active?'':'Inactive'}${x.is_admin?' Admin':''}</span></div>`).join('')}</div>`);
- $('#sv').onclick=async()=>{const r=await rpc('admin_emp',{...cr(),p_id:e.id||null,p_ecode:$('#f1').value,p_name:$('#f2').value,p_desig:$('#f3').value,p_grp:$('#f4').value,p_doj:$('#f5').value||null,p_new_pin:$('#f6').value,p_is_admin:$('#f7').checked,p_active:$('#f8').checked,p_offset:parseInt($('#f9').value,10)||0});
+ out(`<div class="card"><h2>${e.id?'Edit employee':'Add employee'}</h2><div class="bar"><input id="f1" placeholder="Employee code" value="${esc(e.code)}"><input id="f2" placeholder="Name" value="${esc(e.name)}"></div><div class="bar"><input id="f3" placeholder="Designation" value="${esc(e.designation)}"><input id="f4" placeholder="Group or shift" value="${esc(e.grp)}"></div><div class="bar"><label class="mu">Joining date <input type="date" id="f5" value="${e.doj||''}"></label><input id="f6" inputmode="numeric" placeholder="${e.id?'New PIN (leave blank to keep)':'PIN'}"></div><div class="bar"><label class="mu">Working as <select id="f10"><option value="">Not set</option>${CATS.map(c=>`<option ${e.cat===c?'selected':''}>${c}</option>`).join('')}</select></label></div><div class="bar"><label class="mu">Shift cycle offset, 0 to 7 (0 follows the shift calendar) <input type="number" id="f9" min="0" max="7" value="${e.offset||0}"></label></div><div class="bar"><label><input type="checkbox" id="f7" ${e.is_admin?'checked':''}> Admin</label><label><input type="checkbox" id="f8" ${e.id&&!e.active?'':'checked'}> Active</label></div><div class="bar"><button class="pri" id="sv">Save employee</button>${e.id?'<button id="nw">Add a new one</button>':''}</div></div>
+ <div class="card"><b>Employees</b>${D.emps.map(x=>`<div class="row" data-e="${x.id}" style="cursor:pointer"><span>${esc(x.name)}<div class="mu">${esc([x.code,x.designation,x.cat,x.grp].filter(Boolean).join(', '))}</div></span><span class="mu">${x.active?'':'Inactive'}${x.is_admin?' Admin':''}</span></div>`).join('')}</div>`);
+ $('#sv').onclick=async()=>{const r=await rpc('admin_emp',{...cr(),p_id:e.id||null,p_ecode:$('#f1').value,p_name:$('#f2').value,p_desig:$('#f3').value,p_grp:$('#f4').value,p_doj:$('#f5').value||null,p_new_pin:$('#f6').value,p_is_admin:$('#f7').checked,p_active:$('#f8').checked,p_offset:parseInt($('#f9').value,10)||0,p_cat:$('#f10').value});
   if(r.error)return toast(r.error);toast('Saved');D=null;emps()};
  if(e.id)$('#nw').onclick=()=>emps();
  $('#app').onclick=ev=>{const r=ev.target.closest('[data-e]');if(r)emps(r.dataset.e)}}
@@ -152,6 +158,23 @@ async function chv(){if(!await load())return;
  $('#ca').onclick=async()=>{const r=await rpc('admin_ch_add',{...cr(),p_emp:$('#ce').value,p_occasion:$('#co').value,p_odate:$('#cod').value||null,p_cdate:$('#cdd').value||null});if(r.error)return toast(r.error);toast('CH credited');chv()};
  $('#app').onclick=async e=>{const ga=e.target.dataset.ga,gr=e.target.dataset.gr;if(ga||gr){const k=(ga?'a':'r')+(ga||gr);if(armed!==k){armed=k;chv();return}armed='';const r=await rpc('admin_gh_decide',{...cr(),p_id:ga||gr,p_approve:!!ga});if(r.error)toast(r.error);else toast(ga?'Approved. CH credited':'Request rejected');chv();return}const id=e.target.dataset.cd;if(!id)return;if(armed!==id){armed=id;chv();return}armed='';const r=await rpc('admin_ch_del',{...cr(),p_id:id});if(r.error)toast(r.error);chv()}}
 
+const CATS=['AEE','AE','JE','Technician','BA','Helper'];
+let LD=null,lsel='';
+async function lv(){const r=await rpc('admin_leave',cr());if(r.error)return out(`<p class="err">${esc(r.error)}</p>`);LD=r;if(!lsel)lsel=r.today;lvDraw()}
+function lvDraw(){const r=LD,cap={},staff={};r.cap.forEach(c=>{cap[c.cat]=c.cap;staff[c.cat]=c.staff});
+ const days=[];for(let i=0;i<30;i++)days.push(addD(r.today,i));
+ const by=d=>{const o={};CATS.forEach(c=>o[c]=[]);r.apps.forEach(a=>{if(a.from<=d&&a.to>=d&&o[a.cat])o[a.cat].push(a.name)});return o};
+ const lead=(new Date(+days[0].slice(0,4),+days[0].slice(5,7)-1,+days[0].slice(8)).getDay()+6)%7;
+ let g=['M','T','W','T','F','S','S'].map(x=>`<div class="lvh">${x}</div>`).join('')+'<div></div>'.repeat(lead);
+ days.forEach(d=>{const o=by(d),n=CATS.reduce((s,c)=>s+o[c].length,0),fl=CATS.some(c=>o[c].length>0&&o[c].length>=cap[c]);g+=`<button class="lvd ${fl?'lr':'lg'} ${lsel===d?'on':''}" data-ld="${d}">${+d.slice(8)}<small>${n||(+d.slice(8)===1||d===days[0]?MON[+d.slice(5,7)-1]:'')}</small></button>`});
+ const so=by(lsel);
+ out(`<div class="card"><h2>Maximum members allowed to apply leave</h2><p class="mu">Per category, for each date. You can change these at any time. Applications already made are not removed when you lower a limit.</p><div class="bar">${CATS.map(c=>`<label class="mu">${c} (${staff[c]||0} staff) <input type="number" min="0" max="99" id="cap_${c}" value="${cap[c]??0}" style="width:70px"></label>`).join('')}</div><button class="pri" id="cs">Save limits</button></div>
+ <div class="card"><h2>Leaves calendar, next 30 days</h2><p class="mu">Red means at least one category is full on that date. Green means every category still has room. The small number is how many people applied. Tap a date to see who.</p><div class="lvg">${g}</div></div>
+ <div class="card"><b>${lsel}</b>${CATS.map(c=>`<div class="row"><span><b>${c}</b> <span class="mu">${so[c].length} of ${cap[c]??0} allowed</span></span><span style="text-align:right">${so[c].map(esc).join(', ')||'<span class="mu">none</span>'}</span></div>`).join('')}</div>
+ <div class="card"><b>Upcoming applications</b><div class="wrap"><table><tr><th class="nm" style="position:static">Employee</th><th>Category</th><th>From</th><th>To</th><th>Note</th><th></th></tr>${r.apps.map(a=>`<tr><td class="nm" style="position:static">${esc(a.name)}</td><td style="padding:6px">${esc(a.cat||'')}</td><td>${a.from}</td><td>${a.to}</td><td style="padding:6px">${esc(a.note||'')}</td><td style="padding:4px"><button data-lx="${a.id}">${armed===a.id?'Confirm':'Delete'}</button></td></tr>`).join('')||'<tr><td colspan="6" class="mu" style="padding:10px">No upcoming applications.</td></tr>'}</table></div></div>`);
+ $('#cs').onclick=async()=>{const o={};CATS.forEach(c=>o[c]=String($('#cap_'+c).value||'0'));const x=await rpc('admin_leave_caps',{...cr(),p_caps:o});if(x.error)return toast(x.error);toast('Limits saved');lv()};
+ $('#app').onclick=async e=>{const d=e.target.closest('[data-ld]');if(d){lsel=d.dataset.ld;lvDraw();return}const id=e.target.dataset.lx;if(!id)return;if(armed!==id){armed=id;lvDraw();return}armed='';const x=await rpc('admin_leave_del',{...cr(),p_id:id});if(x.error)toast(x.error);lv()}}
+
 let hy=new Date().getFullYear();
 async function hol(){const r=await rpc('admin_hols',{...cr(),p_year:hy});if(r.error)return out(`<p class="err">${esc(r.error)}</p>`);
  out(`<div class="card"><h2>Holidays</h2><div class="bar"><input type="date" id="hd"><select id="hk"><option value="GH">GH - Gazetted holiday</option><option value="RH">RH - Restricted holiday</option></select><input id="hn" placeholder="Holiday name"></div><button class="pri" id="ha">Add holiday</button><p class="mu">Listed dates are marked in the Register. On a GH day, an employee who checks in chooses EW (extra wages) or CH in the app. A CH choice comes to the CH register for your approval. Adding a date that is already listed changes it.</p></div>
@@ -177,6 +200,6 @@ async function sm(){if(!await load())return;const Y=+ym.slice(0,4),M=+ym.slice(5
  $('#ym').onchange=e=>{if(e.target.value){ym=e.target.value;sm()}};$('#sp').onchange=e=>{sp=e.target.value;sm()}}
 
 function applyTheme(){if(!window.Native)return;document.body.classList.add('nat');try{const t=JSON.parse(Native.theme()),r=document.documentElement;r.dataset.theme=t.dark?'dark':'light';['bg','card','tx','mu','bd','ac'].forEach(k=>r.style.setProperty('--'+k,t[k]))}catch(e){}}
-function render(){applyTheme();stopWatch();$('#app').onclick=null;$('#app').onchange=null;rm='';if(!me)return loginView();if(!me.admin)tab='mine';else if(window.Native&&tab==='mine')tab='reg';({reg,ch:chv,bal,sm,emps,hol,off,mine})[tab]()}
+function render(){applyTheme();stopWatch();$('#app').onclick=null;$('#app').onchange=null;rm='';if(!me)return loginView();if(!me.admin)tab='mine';else if(window.Native&&tab==='mine')tab='reg';({reg,ch:chv,bal,sm,emps,hol,lv,off,mine})[tab]()}
 (async()=>{if(!me&&window.Native){try{const c=JSON.parse(Native.creds()),r=await rpc('login',{p_code:c.code,p_pin:c.pin});if(!r.error){me={code:r.code,pin:c.pin,name:r.name,admin:r.admin};sessionStorage.setItem('sa',JSON.stringify(me));tab=me.admin?'reg':'mine'}else if(/Invalid code/.test(r.error)){Native.logout();return}else{$('#app').innerHTML='<p class="err" style="padding:16px">'+esc(r.error)+'</p>';return}}catch(e){}}render()})();
 </script></body></html>
