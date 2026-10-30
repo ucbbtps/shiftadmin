@@ -28,6 +28,12 @@ td.c{height:38px;min-width:34px;font-weight:600;cursor:pointer;user-select:none}
 
 :root[data-theme="dark"]{--P:#1c3b2a;--A:#46252a;--L:#202f4c;--WO:#2a3331;--hD:#17505a;--hE:#3d2a56;--hCS:#1c5030;--hN:#5a4423;--hO:#3a4140}
 :root[data-theme="light"]{--P:#d5f0df;--A:#f8d9d9;--L:#dbe6f8;--WO:#e5e8e8;--hD:#b9f1f3;--hE:#e1c9f2;--hCS:#b5f5c0;--hN:#efd9b0;--hO:#e9ecec}
+:root{--ghc:#d64550;--rhc:#d98a1f}
+th.gh{background:var(--ghc)!important;color:#fff!important}
+th.rh{background:var(--rhc)!important;color:#fff!important}
+td.gh{box-shadow:inset 2px 0 var(--ghc),inset -2px 0 var(--ghc)}
+td.rh{box-shadow:inset 2px 0 var(--rhc),inset -2px 0 var(--rhc)}
+th small{font-size:9px;font-weight:700}
 body.nat{padding-top:8px}
 .nat .card,.nat .wrap{border:0;border-radius:20px}
 .nat input,.nat select,.nat button{border-radius:12px}
@@ -52,7 +58,7 @@ async function rpc(fn,a){if(API_URL.includes('YOUR-PROJECT')||API_KEY.includes('
 const cr=()=>({p_code:me.code,p_pin:me.pin});
 
 function head(){if(!me)return '<h1>Shift Admin</h1>';
- const T=me.admin?[['reg','Register'],['ch','CH register'],['bal','Balances'],['sm','Summary'],['emps','Employees'],['off','Office']].concat(window.Native?[]:[['mine','My check-in']]):[];
+ const T=me.admin?[['reg','Register'],['ch','CH register'],['bal','Balances'],['sm','Summary'],['emps','Employees'],['hol','Holidays'],['off','Office']].concat(window.Native?[]:[['mine','My check-in']]):[];
  return `${window.Native?'':'<div class="bar"><h1 style="flex:2">Shift Admin</h1><button id="lo">Log out</button></div>'}${T.length?'<div class="tabs">'+T.map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?'on':''}">${t[1]}</button>`).join('')+'</div>':''}`}
 document.addEventListener('click',e=>{if(e.target.id==='lo'){sessionStorage.removeItem('sa');me=null;render()}const t=e.target.dataset.t;if(t){tab=t;render()}});
 
@@ -73,23 +79,23 @@ async function mine(){const r=await rpc('my_month',{...cr(),p_month:ym});if(r.er
  $('#ci').onclick=()=>go('in');$('#co').onclick=()=>go('out');$('#au').onchange=e=>{localStorage.setItem('auto',e.target.checked?'on':'off');mine()};if(!t.check_in&&$('#au').checked)watch(r.office,go)}
 
 async function load(){D=await rpc('admin_data',{...cr(),p_month:ym});if(D.error){out(`<p class="err">${esc(D.error)}</p>`);return false}return true}
-let X=[],OV={},rm='',rp=(()=>{const t=new Date(),m=t.getDate()>15?new Date(t.getFullYear(),t.getMonth()+1,1):t;return m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0')})();
+let X=[],OV={},HOL={},rm='',rp=(()=>{const t=new Date(),m=t.getDate()>15?new Date(t.getFullYear(),t.getMonth()+1,1):t;return m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0')})();
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const f2=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const addD=(s,n)=>{const p=s.split('-').map(Number);return f2(new Date(p[0],p[1]-1,p[2]+n))};
 const plan=(e,d)=>OV[e.id+'|'+d]||shiftOf(e.offset,d);
 function period(){const[y,m]=rp.split('-').map(Number);return[f2(new Date(y,m-2,16)),f2(new Date(y,m-1,15))]}
-async function reg(){if(!await load())return;const[a,b]=period(),r=await rpc('admin_range',{...cr(),p_from:a,p_to:addD(b,1)});if(r.error)return toast(r.error);D.att=r.att;X=r.extra;OV={};r.ov.forEach(o=>OV[o.emp+'|'+o.day]=o.shift);draw()}
+async function reg(){if(!await load())return;const[a,b]=period(),r=await rpc('admin_range',{...cr(),p_from:a,p_to:addD(b,1)});if(r.error)return toast(r.error);D.att=r.att;X=r.extra;HOL={};(r.hol||[]).forEach(x=>HOL[x.day]=x);OV={};r.ov.forEach(o=>OV[o.emp+'|'+o.day]=o.shift);draw()}
 function draw(){const w0=$('.wrap'),sl=w0?w0.scrollLeft:0,sy=window.scrollY,same=rm===rp;rm=rp;
  const[a,b]=period(),days=[];for(let d=a;d<=b;d=addD(d,1))days.push(d);
  const A={},XM={};D.att.forEach(x=>A[x.emp+'|'+x.day]=x);X.forEach(x=>XM[x.emp+'|'+x.day]=x);
  const wk=(e,d)=>{const x=A[e.id+'|'+d],z=XM[e.id+'|'+d];return x&&x.status==='P'?[plan(e,d)].concat(z?[z.shift]:[]):[]};
  const sa=e=>days.reduce((n,d)=>{const w=wk(e,d);return n+(w.includes('N')?1:0)+(w.includes('E')&&!wk(e,addD(d,1)).includes('N')?1:0)},0);
- let h=`<div class="bar"><label class="mu">Period ending 15th of <input type="month" id="rp" value="${rp}"></label></div><p class="mu">Showing ${a} to ${b}. Tap a cell to choose a status or change the planned shift. A check-in marks P automatically. Grey letters are the planned shift and turn colored when the employee is present. An outlined cell such as D+N is a planned shift plus an extra shift. An underlined letter is a changed shift. SA is the shift allowance count: Evng and Night shifts worked while present, and an Evng followed by a Night on the next day counts once.</p><div class="bar mu" style="gap:6px">${['D','E','CS','N','O'].map(x=>`<span class="h${x}" style="padding:2px 8px;border-radius:6px;flex:0 0 auto">${SHN[x]}</span>`).join('')}</div><div class="wrap"><table id="g"><tr><th class="nm">Employee</th>`;
- days.forEach(d=>{h+=`<th title="${d}">${+d.slice(8)}${d===a||d.slice(8)==='01'?'<br>'+MON[+d.slice(5,7)-1]:''}</th>`});h+='</tr>';
+ let h=`<div class="bar"><label class="mu">Period ending 15th of <input type="month" id="rp" value="${rp}"></label></div><p class="mu">Showing ${a} to ${b}. Tap a cell to choose a status or change the planned shift. A check-in marks P automatically. Grey letters are the planned shift and turn colored when the employee is present. An outlined cell such as D+N is a planned shift plus an extra shift. An underlined letter is a changed shift. Dates marked GH (gazetted holiday) or RH (restricted holiday) come from the Holidays tab. SA is the shift allowance count: Evng and Night shifts worked while present, and an Evng followed by a Night on the next day counts once.</p><div class="bar mu" style="gap:6px">${['D','E','CS','N','O'].map(x=>`<span class="h${x}" style="padding:2px 8px;border-radius:6px;flex:0 0 auto">${SHN[x]}</span>`).join('')}<span style="padding:2px 8px;border-radius:6px;flex:0 0 auto;background:var(--ghc);color:#fff">GH</span><span style="padding:2px 8px;border-radius:6px;flex:0 0 auto;background:var(--rhc);color:#fff">RH</span></div><div class="wrap"><table id="g"><tr><th class="nm">Employee</th>`;
+ days.forEach(d=>{const hl=HOL[d];h+=`<th title="${d}${hl?' '+hl.kind+': '+esc(hl.name):''}" class="${hl?hl.kind.toLowerCase():''}">${+d.slice(8)}${d===a||d.slice(8)==='01'?'<br>'+MON[+d.slice(5,7)-1]:''}${hl?'<br><small>'+hl.kind+'</small>':''}</th>`});h+='</tr>';
  D.emps.filter(e=>e.active).forEach(e=>{h+=`<tr><td class="nm">${esc(e.name)}<div class="mu">${esc([e.code,e.designation,e.grp].filter(Boolean).join(', '))}</div><div class="mu"><b>SA ${sa(e)}</b></div></td>`;
   days.forEach(d=>{const k=e.id+'|'+d,x=A[k],xe=XM[k],st=x?x.status:'',sh=plan(e,d),c=(st==='P'?'h'+sh:st==='A'?'sA':st==='WO'?'sWO':st?'sL':'i')+(xe?' x':'')+(OV[k]?' o':''),tx=xe?SHL[sh]+'+'+(SHL[xe.shift]||'X'):st&&st!=='P'?st:SHL[sh];
-   h+=`<td class="c ${c}" data-k="${k}" title="${x&&x.check_in?'In '+hm(x.check_in)+(x.dist!=null?' ('+x.dist+' m)':''):''}">${tx}</td>`});h+='</tr>'});
+   h+=`<td class="c ${c}${HOL[d]?' '+HOL[d].kind.toLowerCase():''}" data-k="${k}" title="${x&&x.check_in?'In '+hm(x.check_in)+(x.dist!=null?' ('+x.dist+' m)':''):''}">${tx}</td>`});h+='</tr>'});
  const td=D.att.filter(x=>x.day===D.today&&x.check_in);
  h+=`</table></div><div class="card" style="margin-top:12px"><b>Today's check-ins (${td.length})</b>${td.map(x=>{const e=D.emps.find(z=>z.id===x.emp);return `<div class="row"><span>${esc(e?e.name:'')}</span><span class="mu">in ${hm(x.check_in)}${x.check_out?', out '+hm(x.check_out):''}, ${x.dist} m</span></div>`}).join('')||'<p class="mu">Nobody yet.</p>'}</div>`;
  out(h);if(same){const w1=$('.wrap');if(w1)w1.scrollLeft=sl;window.scrollTo(0,sy)}
@@ -139,10 +145,21 @@ function pick(k){const p=k.split('|'),e=D.emps.find(z=>z.id===p[0]),a=D.att.find
   m.remove();reg()}}
 
 async function chv(){if(!await load())return;
+ const g=await rpc('admin_gh_list',cr()),GL=Array.isArray(g)?g:[];
+ const gh=GL.length?`<div class="card"><b>GH duty: EW and CH requests</b><p class="mu">Approving a CH request credits one CH to the employee. EW needs no approval.</p><div class="wrap"><table><tr><th class="nm" style="position:static">Employee</th><th>GH date</th><th>Choice</th><th>Status</th><th></th></tr>${GL.map(w=>{const e=D.emps.find(z=>z.id===w.emp)||{},pd=w.choice==='CH'&&w.status==='pending';return `<tr><td class="nm" style="position:static">${esc(e.name)}</td><td style="padding:6px">${w.day}<div class="mu">${esc(w.name||'')}</div></td><td style="padding:6px">${w.choice}</td><td style="padding:6px">${w.choice==='EW'?'Extra wages':w.status==='pending'?'Pending':w.status==='approved'?'Approved':'Rejected'}</td><td style="padding:4px;white-space:nowrap">${pd?`<button data-ga="${w.id}">${armed==='a'+w.id?'Confirm':'Approve'}</button> <button data-gr="${w.id}">${armed==='r'+w.id?'Confirm':'Reject'}</button>`:''}</td></tr>`}).join('')}</table></div></div>`:'';
  out(`<div class="card"><h2>Credit CH</h2><div class="bar"><select id="ce">${opts()}</select><input id="co" placeholder="Occasion"><label class="mu">Date of occasion <input type="date" id="cod"></label><label class="mu">Date of credit <input type="date" id="cdd" value="${D.today}"></label></div><button class="pri" id="ca">Credit CH</button><p class="mu">Maximum 15 CH per employee per year, counted by date of credit. Each CH expires 3 months after its date of credit. When CH is marked in the Register, the oldest available CH is used first.</p></div>
- <div class="wrap"><table><tr><th class="nm">Employee</th><th>Occasion</th><th>Occasion date</th><th>Credited</th><th>Expires</th><th>Status</th><th></th></tr>${D.ch.map(c=>{const e=D.emps.find(z=>z.id===c.emp)||{},ex=addM(c.cdate,3),st=c.avail?'Availed '+c.avail:ex<D.today?'Expired':'Available';return `<tr><td class="nm">${esc(e.name)}</td><td style="padding:6px">${esc(c.occasion)}</td><td>${c.odate||''}</td><td>${c.cdate}</td><td>${ex}</td><td style="padding:6px">${st}</td><td style="padding:4px">${c.avail?'':`<button data-cd="${c.id}">${armed===c.id?'Confirm':'Delete'}</button>`}</td></tr>`}).join('')}</table></div>`);
+ ${gh}<div class="wrap"><table><tr><th class="nm">Employee</th><th>Occasion</th><th>Occasion date</th><th>Credited</th><th>Expires</th><th>Status</th><th></th></tr>${D.ch.map(c=>{const e=D.emps.find(z=>z.id===c.emp)||{},ex=addM(c.cdate,3),st=c.avail?'Availed '+c.avail:ex<D.today?'Expired':'Available';return `<tr><td class="nm">${esc(e.name)}</td><td style="padding:6px">${esc(c.occasion)}</td><td>${c.odate||''}</td><td>${c.cdate}</td><td>${ex}</td><td style="padding:6px">${st}</td><td style="padding:4px">${c.avail?'':`<button data-cd="${c.id}">${armed===c.id?'Confirm':'Delete'}</button>`}</td></tr>`}).join('')}</table></div>`);
  $('#ca').onclick=async()=>{const r=await rpc('admin_ch_add',{...cr(),p_emp:$('#ce').value,p_occasion:$('#co').value,p_odate:$('#cod').value||null,p_cdate:$('#cdd').value||null});if(r.error)return toast(r.error);toast('CH credited');chv()};
- $('#app').onclick=async e=>{const id=e.target.dataset.cd;if(!id)return;if(armed!==id){armed=id;chv();return}armed='';const r=await rpc('admin_ch_del',{...cr(),p_id:id});if(r.error)toast(r.error);chv()}}
+ $('#app').onclick=async e=>{const ga=e.target.dataset.ga,gr=e.target.dataset.gr;if(ga||gr){const k=(ga?'a':'r')+(ga||gr);if(armed!==k){armed=k;chv();return}armed='';const r=await rpc('admin_gh_decide',{...cr(),p_id:ga||gr,p_approve:!!ga});if(r.error)toast(r.error);else toast(ga?'Approved. CH credited':'Request rejected');chv();return}const id=e.target.dataset.cd;if(!id)return;if(armed!==id){armed=id;chv();return}armed='';const r=await rpc('admin_ch_del',{...cr(),p_id:id});if(r.error)toast(r.error);chv()}}
+
+let hy=new Date().getFullYear();
+async function hol(){const r=await rpc('admin_hols',{...cr(),p_year:hy});if(r.error)return out(`<p class="err">${esc(r.error)}</p>`);
+ out(`<div class="card"><h2>Holidays</h2><div class="bar"><input type="date" id="hd"><select id="hk"><option value="GH">GH - Gazetted holiday</option><option value="RH">RH - Restricted holiday</option></select><input id="hn" placeholder="Holiday name"></div><button class="pri" id="ha">Add holiday</button><p class="mu">Listed dates are marked in the Register. On a GH day, an employee who checks in chooses EW (extra wages) or CH in the app. A CH choice comes to the CH register for your approval. Adding a date that is already listed changes it.</p></div>
+ <div class="bar"><label class="mu">Year <input type="number" id="hyr" value="${hy}" min="2020" max="2100" style="width:90px"></label></div>
+ <div class="wrap"><table><tr><th class="nm" style="position:static">Date</th><th>Type</th><th>Name</th><th></th></tr>${r.map(x=>`<tr><td class="nm" style="position:static">${x.day}</td><td style="padding:6px">${x.kind}</td><td style="padding:6px">${esc(x.name)}</td><td style="padding:4px"><button data-hd="${x.day}">${armed===x.day?'Confirm':'Delete'}</button></td></tr>`).join('')||'<tr><td colspan="4" class="mu" style="padding:10px">No holidays listed for this year.</td></tr>'}</table></div>`);
+ $('#hyr').onchange=e=>{if(e.target.value){hy=+e.target.value;hol()}};
+ $('#ha').onclick=async()=>{const d=$('#hd').value,r=await rpc('admin_hol_set',{...cr(),p_day:d||null,p_kind:$('#hk').value,p_name:$('#hn').value});if(r.error)return toast(r.error);if(d)hy=+d.slice(0,4);toast('Holiday saved');hol()};
+ $('#app').onclick=async e=>{const d=e.target.dataset.hd;if(!d)return;if(armed!==d){armed=d;hol();return}armed='';const r=await rpc('admin_hol_del',{...cr(),p_day:d});if(r.error)toast(r.error);hol()}}
 
 const LV=['CL','RH','EL','CML','HPL','CH','UJP'];
 function balTable(b){return `<table><tr><th class="nm" style="position:static">Leave</th><th>Credited</th><th>Used</th><th>Balance</th></tr>${LV.map(k=>{const x=b[k];return `<tr><td class="nm" style="position:static">${k}</td><td style="padding:8px 6px">${x[0]??'-'}</td><td>${x[1]}</td><td style="font-weight:700;${typeof x[2]==='number'&&x[2]<0?'color:#b3261e':''}">${x[2]??'No limit'}</td></tr>`}).join('')}</table>`}
@@ -160,6 +177,6 @@ async function sm(){if(!await load())return;const Y=+ym.slice(0,4),M=+ym.slice(5
  $('#ym').onchange=e=>{if(e.target.value){ym=e.target.value;sm()}};$('#sp').onchange=e=>{sp=e.target.value;sm()}}
 
 function applyTheme(){if(!window.Native)return;document.body.classList.add('nat');try{const t=JSON.parse(Native.theme()),r=document.documentElement;r.dataset.theme=t.dark?'dark':'light';['bg','card','tx','mu','bd','ac'].forEach(k=>r.style.setProperty('--'+k,t[k]))}catch(e){}}
-function render(){applyTheme();stopWatch();$('#app').onclick=null;$('#app').onchange=null;rm='';if(!me)return loginView();if(!me.admin)tab='mine';else if(window.Native&&tab==='mine')tab='reg';({reg,ch:chv,bal,sm,emps,off,mine})[tab]()}
+function render(){applyTheme();stopWatch();$('#app').onclick=null;$('#app').onchange=null;rm='';if(!me)return loginView();if(!me.admin)tab='mine';else if(window.Native&&tab==='mine')tab='reg';({reg,ch:chv,bal,sm,emps,hol,off,mine})[tab]()}
 (async()=>{if(!me&&window.Native){try{const c=JSON.parse(Native.creds()),r=await rpc('login',{p_code:c.code,p_pin:c.pin});if(!r.error){me={code:r.code,pin:c.pin,name:r.name,admin:r.admin};sessionStorage.setItem('sa',JSON.stringify(me));tab=me.admin?'reg':'mine'}else if(/Invalid code/.test(r.error)){Native.logout();return}else{$('#app').innerHTML='<p class="err" style="padding:16px">'+esc(r.error)+'</p>';return}}catch(e){}}render()})();
 </script></body></html>
