@@ -40,6 +40,10 @@ th small{font-size:9px;font-weight:700}
 .lvd small{font-size:10px;font-weight:600;opacity:.9}
 .lvd.lg{background:#2e9e5b}.lvd.lr{background:#e5484d}.lvd.on{outline:3px solid var(--tx)}
 .lvb{border:0;background:transparent}
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mc{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:16px;min-height:112px;border:0;border-radius:20px;background:var(--card);color:var(--tx);text-align:left;font:inherit;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.mc .mi{font-size:30px;line-height:1.1}.mc b{font-size:16px}.mc .mu{font-size:12px;font-weight:400}
+.back{border:0;border-radius:20px;padding:9px 16px;background:var(--card);color:var(--tx);font:inherit;font-weight:600}
 body.nat{padding-top:8px}
 .nat .card,.nat .wrap{border:0;border-radius:20px}
 .nat input,.nat select,.nat button{border-radius:12px}
@@ -57,21 +61,26 @@ const CODES=['','P','A','CL','CH','EL','CML','HPL','RH','UJP','WO'];
 const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hm=t=>new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
 const n=new Date();let ym=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
-let me=JSON.parse(sessionStorage.getItem('sa')||'null'),tab='mine',D=null,tt;
+let me=JSON.parse(sessionStorage.getItem('sa')||'null'),tab=(JSON.parse(sessionStorage.getItem('sa')||'null')||{}).admin?'menu':'mine',D=null,tt;
 const out=h=>{$('#app').innerHTML=head()+h};
 function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(tt);tt=setTimeout(()=>t.style.display='none',3500)}
 async function rpc(fn,a){if(API_URL.includes('YOUR-PROJECT')||API_KEY.includes('YOUR-ANON'))return{error:'Set API_URL and API_KEY at the top of index.html, then upload it again.'};try{const r=await fetch(`${API_URL}/rest/v1/rpc/${fn}`,{method:'POST',headers:{apikey:API_KEY,Authorization:'Bearer '+API_KEY,'Content-Type':'application/json'},body:JSON.stringify(a)});const j=await r.json();return r.ok?j:{error:j.message||'Request failed'}}catch(e){return{error:'Could not reach '+API_URL+'. Check that API_URL is correct and the project is not paused.'}}}
 const cr=()=>({p_code:me.code,p_pin:me.pin});
 
+const MENU=[['reg','Register','\u{1F4CB}','Attendance register'],['ch','CH register','\u{1F381}','CH credits and GH requests'],['bal','Balances','\u2696\uFE0F','Leave balances'],['sm','Summary','\u{1F4CA}','Counts per employee'],['emps','Employees','\u{1F465}','Add and edit employees'],['hol','Holidays','\u{1F389}','GH and RH list'],['lv','Leaves','\u{1F334}','Limits and leaves calendar'],['off','Office','\u{1F3E2}','Location and radius']];
+const MENUALL=()=>MENU.concat(window.Native?[]:[['mine','My check-in','\u2705','Mark your own attendance']]);
 function head(){if(!me)return '<h1>Shift Admin</h1>';
- const T=me.admin?[['reg','Register'],['ch','CH register'],['bal','Balances'],['sm','Summary'],['emps','Employees'],['hol','Holidays'],['lv','Leaves'],['off','Office']].concat(window.Native?[]:[['mine','My check-in']]):[];
- return `${window.Native?'':'<div class="bar"><h1 style="flex:2">Shift Admin</h1><button id="lo">Log out</button></div>'}${T.length?'<div class="tabs">'+T.map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?'on':''}">${t[1]}</button>`).join('')+'</div>':''}`}
-document.addEventListener('click',e=>{if(e.target.id==='lo'){sessionStorage.removeItem('sa');me=null;render()}const t=e.target.dataset.t;if(t){tab=t;render()}});
+ const top=window.Native?'':'<div class="bar"><h1 style="flex:2">Shift Admin</h1><button id="lo">Log out</button></div>';
+ const m=me.admin&&tab!=='menu'?MENUALL().find(x=>x[0]===tab):null;
+ return top+(m?`<div class="bar"><button class="back" data-t="menu">\u2039 Menu</button><b style="flex:1;text-align:right">${m[1]}</b></div>`:'')}
+function menu(){out(`<h2 style="margin:6px 2px 14px">Admin menu</h2><div class="mg">${MENUALL().map(m=>`<button class="mc" data-t="${m[0]}"><span class="mi">${m[2]}</span><b>${m[1]}</b><span class="mu">${m[3]}</span></button>`).join('')}</div>`)}
+function backMenu(){if(me&&me.admin&&tab!=='menu'){tab='menu';render();return 'sub'}return 'menu'}
+document.addEventListener('click',e=>{if(e.target.id==='lo'){sessionStorage.removeItem('sa');me=null;render()}const bt=e.target.closest&&e.target.closest('[data-t]'),t=bt&&bt.dataset.t;if(t){tab=t;render()}});
 
 function loginView(){out(`<div class="card"><h2>Log in</h2><div class="bar"><input id="c" placeholder="Employee code" autocomplete="username" autocapitalize="characters"><input id="p" type="password" inputmode="numeric" placeholder="PIN" autocomplete="current-password"></div><button class="pri big" id="go" style="margin-top:0">Log in</button><p class="err" id="e"></p></div>`);
  const go=async()=>{const code=$('#c').value.trim(),pin=$('#p').value;if(!code||!pin){$('#e').textContent='Enter your employee code and PIN.';return}
   const r=await rpc('login',{p_code:code,p_pin:pin});if(r.error){$('#e').textContent=r.error;return}
-  me={code:r.code,pin,name:r.name,admin:r.admin};sessionStorage.setItem('sa',JSON.stringify(me));tab=me.admin?'reg':'mine';render()};
+  me={code:r.code,pin,name:r.name,admin:r.admin};sessionStorage.setItem('sa',JSON.stringify(me));tab=me.admin?'menu':'mine';render()};
  $('#go').onclick=go;$('#p').onkeydown=e=>{if(e.key==='Enter')go()}}
 
 const pos=()=>new Promise((ok,no)=>navigator.geolocation.getCurrentPosition(ok,no,{enableHighAccuracy:true,timeout:15000,maximumAge:0}));
@@ -177,7 +186,7 @@ function lvDraw(){const r=LD,cap={},staff={};r.cap.forEach(c=>{cap[c.cat]=c.cap;
 
 let hy=new Date().getFullYear();
 async function hol(){const r=await rpc('admin_hols',{...cr(),p_year:hy});if(r.error)return out(`<p class="err">${esc(r.error)}</p>`);
- out(`<div class="card"><h2>Holidays</h2><div class="bar"><input type="date" id="hd"><select id="hk"><option value="GH">GH - Gazetted holiday</option><option value="RH">RH - Restricted holiday</option></select><input id="hn" placeholder="Holiday name"></div><button class="pri" id="ha">Add holiday</button><p class="mu">Listed dates are marked in the Register. On a GH day, an employee who checks in chooses EW (extra wages) or CH in the app. A CH choice comes to the CH register for your approval. Adding a date that is already listed changes it.</p></div>
+ out(`<div class="card"><h2>Holidays</h2><div class="bar"><input type="date" id="hd"><select id="hk"><option value="GH">GH - Gazetted holiday</option><option value="RH">RH - Restricted holiday</option></select><input id="hn" placeholder="Holiday name"></div><button class="pri" id="ha">Add holiday</button><p class="mu">Listed dates are marked in the Register. On a GH day, an employee who checks in chooses EW (extra wages) or CH in the app. A CH choice comes to the CH register for your approval. Adding a date that is already listed changes it. If a GH falls on an employee's Off shift, that employee is credited one CH automatically (dated the next day, no approval), unless the employee was absent on both the day before and the day after. An employee who works on the GH chooses EW or CH instead.</p></div>
  <div class="bar"><label class="mu">Year <input type="number" id="hyr" value="${hy}" min="2020" max="2100" style="width:90px"></label></div>
  <div class="wrap"><table><tr><th class="nm" style="position:static">Date</th><th>Type</th><th>Name</th><th></th></tr>${r.map(x=>`<tr><td class="nm" style="position:static">${x.day}</td><td style="padding:6px">${x.kind}</td><td style="padding:6px">${esc(x.name)}</td><td style="padding:4px"><button data-hd="${x.day}">${armed===x.day?'Confirm':'Delete'}</button></td></tr>`).join('')||'<tr><td colspan="4" class="mu" style="padding:10px">No holidays listed for this year.</td></tr>'}</table></div>`);
  $('#hyr').onchange=e=>{if(e.target.value){hy=+e.target.value;hol()}};
@@ -200,6 +209,6 @@ async function sm(){if(!await load())return;const Y=+ym.slice(0,4),M=+ym.slice(5
  $('#ym').onchange=e=>{if(e.target.value){ym=e.target.value;sm()}};$('#sp').onchange=e=>{sp=e.target.value;sm()}}
 
 function applyTheme(){if(!window.Native)return;document.body.classList.add('nat');try{const t=JSON.parse(Native.theme()),r=document.documentElement;r.dataset.theme=t.dark?'dark':'light';['bg','card','tx','mu','bd','ac'].forEach(k=>r.style.setProperty('--'+k,t[k]))}catch(e){}}
-function render(){applyTheme();stopWatch();$('#app').onclick=null;$('#app').onchange=null;rm='';if(!me)return loginView();if(!me.admin)tab='mine';else if(window.Native&&tab==='mine')tab='reg';({reg,ch:chv,bal,sm,emps,hol,lv,off,mine})[tab]()}
-(async()=>{if(!me&&window.Native){try{const c=JSON.parse(Native.creds()),r=await rpc('login',{p_code:c.code,p_pin:c.pin});if(!r.error){me={code:r.code,pin:c.pin,name:r.name,admin:r.admin};sessionStorage.setItem('sa',JSON.stringify(me));tab=me.admin?'reg':'mine'}else if(/Invalid code/.test(r.error)){Native.logout();return}else{$('#app').innerHTML='<p class="err" style="padding:16px">'+esc(r.error)+'</p>';return}}catch(e){}}render()})();
+function render(){applyTheme();stopWatch();$('#app').onclick=null;$('#app').onchange=null;rm='';if(!me)return loginView();if(!me.admin)tab='mine';else if(window.Native&&tab==='mine')tab='menu';({menu,reg,ch:chv,bal,sm,emps,hol,lv,off,mine})[tab]()}
+(async()=>{if(!me&&window.Native){try{const c=JSON.parse(Native.creds()),r=await rpc('login',{p_code:c.code,p_pin:c.pin});if(!r.error){me={code:r.code,pin:c.pin,name:r.name,admin:r.admin};sessionStorage.setItem('sa',JSON.stringify(me));tab=me.admin?'menu':'mine'}else if(/Invalid code/.test(r.error)){Native.logout();return}else{$('#app').innerHTML='<p class="err" style="padding:16px">'+esc(r.error)+'</p>';return}}catch(e){}}render()})();
 </script></body></html>
