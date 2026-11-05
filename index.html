@@ -36,9 +36,9 @@ td.rh{box-shadow:inset 2px 0 var(--rhc),inset -2px 0 var(--rhc)}
 th small{font-size:9px;font-weight:700}
 .lvg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:8px 0}
 .lvh{text-align:center;font-size:12px;color:var(--mu)}
-.lvd{aspect-ratio:1;border:0;border-radius:12px;color:#fff;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;line-height:1.1}
+.lvd{height:68px;border:0;border-radius:12px;color:#fff;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;line-height:1.1}
 .lvd small{font-size:10px;font-weight:600;opacity:.9}
-.lvd.lg{background:#2e9e5b}.lvd.lr{background:#e5484d}.lvd.on{outline:3px solid var(--tx)}
+.lvd.lg{background:#2e9e5b}.lvd.lo{background:#e8890c}.lvd.lr{background:#e5484d}.lvd b{font-size:13px}.lvd.on{outline:3px solid var(--tx)}
 .lvb{border:0;background:transparent}
 .mg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .mc{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:16px;min-height:112px;border:0;border-radius:20px;background:var(--card);color:var(--tx);text-align:left;font:inherit;box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -171,19 +171,22 @@ async function chv(){if(!await load())return;
  $('#app').onclick=async e=>{const ga=e.target.dataset.ga,gr=e.target.dataset.gr;if(ga||gr){const k=(ga?'a':'r')+(ga||gr);if(armed!==k){armed=k;chv();return}armed='';const r=await rpc('admin_gh_decide',{...cr(),p_id:ga||gr,p_approve:!!ga});if(r.error)toast(r.error);else toast(ga?'Approved. CH credited':'Request rejected');chv();return}const id=e.target.dataset.cd;if(!id)return;if(armed!==id){armed=id;chv();return}armed='';const r=await rpc('admin_ch_del',{...cr(),p_id:id});if(r.error)toast(r.error);chv()}}
 
 const CATS=['AEE','AE','JE','Technician','BA','Helper'];
-let LD=null,lsel='';
-async function lv(){const r=await rpc('admin_leave',cr());if(r.error)return out(`<p class="err">${esc(r.error)}</p>`);LD=r;if(!lsel)lsel=r.today;lvDraw()}
+let LD=null,lsel='',lvEmp='';
+async function lv(){if(!await load())return;const r=await rpc('admin_leave',cr());if(r.error)return out(`<p class="err">${esc(r.error)}</p>`);LD=r;OV={};(r.ov||[]).forEach(x=>OV[x.emp+'|'+x.day]=x.shift);if(!lsel||lsel<r.today)lsel=r.today;if(!lvEmp){const m=D.emps.find(z=>z.code===me.code);lvEmp=m?m.id:''}lvDraw()}
 function lvDraw(){const r=LD,cap={},staff={};r.cap.forEach(c=>{cap[c.cat]=c.cap;staff[c.cat]=c.staff});
  const days=[];for(let i=0;i<30;i++)days.push(addD(r.today,i));
- const by=d=>{const o={};CATS.forEach(c=>o[c]=[]);r.apps.forEach(a=>{if(a.from<=d&&a.to>=d&&o[a.cat])o[a.cat].push(a.name)});return o};
+ const by=d=>{const o={};CATS.forEach(c=>o[c]=[]);r.apps.forEach(a=>{if(a.from<=d&&a.to>=d&&o[a.cat])o[a.cat].push(a)});return o};
+ const ee=D.emps.find(z=>z.id===lvEmp);
  const lead=(new Date(+days[0].slice(0,4),+days[0].slice(5,7)-1,+days[0].slice(8)).getDay()+6)%7;
  let g=['M','T','W','T','F','S','S'].map(x=>`<div class="lvh">${x}</div>`).join('')+'<div></div>'.repeat(lead);
- days.forEach(d=>{const o=by(d),n=CATS.reduce((s,c)=>s+o[c].length,0),fl=CATS.some(c=>o[c].length>0&&o[c].length>=cap[c]);g+=`<button class="lvd ${fl?'lr':'lg'} ${lsel===d?'on':''}" data-ld="${d}">${+d.slice(8)}<small>${n||(+d.slice(8)===1||d===days[0]?MON[+d.slice(5,7)-1]:'')}</small></button>`});
+ days.forEach(d=>{const o=by(d),n=CATS.reduce((s,c)=>s+o[c].length,0),fl=CATS.some(c=>o[c].length>0&&o[c].length>=cap[c]),cl=fl?'lr':n?'lo':'lg',dl=(+d.slice(8))+((d===days[0]||d.slice(8)==='01')?' '+MON[+d.slice(5,7)-1]:'');
+  g+=`<button class="lvd ${cl} ${lsel===d?'on':''}" data-ld="${d}"><b>${dl}</b><small>${ee?SHN[plan(ee,d)]:'-'}</small><small>${n}</small></button>`});
  const so=by(lsel);
  out(`<div class="card"><h2>Maximum members allowed to apply leave</h2><p class="mu">Per category, for each date. You can change these at any time. Applications already made are not removed when you lower a limit. The dates an employee applies for are marked Absent in the attendance register, and cleared again if the application is cancelled or deleted.</p><div class="bar">${CATS.map(c=>`<label class="mu">${c} (${staff[c]||0} staff) <input type="number" min="0" max="99" id="cap_${c}" value="${cap[c]??0}" style="width:70px"></label>`).join('')}</div><button class="pri" id="cs">Save limits</button></div>
- <div class="card"><h2>Leaves calendar, next 30 days</h2><p class="mu">Red means at least one category is full on that date. Green means every category still has room. The small number is how many people applied. Tap a date to see who.</p><div class="lvg">${g}</div></div>
- <div class="card"><b>${lsel}</b>${CATS.map(c=>`<div class="row"><span><b>${c}</b> <span class="mu">${so[c].length} of ${cap[c]??0} allowed</span></span><span style="text-align:right">${so[c].map(esc).join(', ')||'<span class="mu">none</span>'}</span></div>`).join('')}</div>
+ <div class="card"><h2>Leaves calendar, next 30 days</h2><p class="mu"><b style="color:#2e9e5b">Green</b>: nobody has applied. <b style="color:#e8890c">Orange</b>: someone has applied and a category still has vacancy. <b style="color:#e5484d">Red</b>: a category is full. Each date shows the day, the shift of the employee chosen below, and the number of people who applied. Tap a date to see who.</p><div class="bar"><label class="mu">Show shifts of <select id="lve"><option value="">No one</option>${D.emps.filter(e=>e.active).map(e=>`<option value="${e.id}" ${e.id===lvEmp?'selected':''}>${esc(e.name)} (${esc(e.code)})</option>`).join('')}</select></label></div><div class="lvg">${g}</div></div>
+ <div class="card"><b>${lsel}</b>${CATS.map(c=>`<div class="row"><span><b>${c}</b> <span class="mu">${so[c].length} of ${cap[c]??0} allowed</span></span><span style="text-align:right">${so[c].map(a=>{const x=D.emps.find(z=>z.id===a.emp);return esc(a.name)+(x?' <span class="mu">('+SHN[plan(x,lsel)]+')</span>':'')}).join(', ')||'<span class="mu">none</span>'}</span></div>`).join('')}</div>
  <div class="card"><b>Upcoming applications</b><div class="wrap"><table><tr><th class="nm" style="position:static">Employee</th><th>Category</th><th>From</th><th>To</th><th>Note</th><th></th></tr>${r.apps.map(a=>`<tr><td class="nm" style="position:static">${esc(a.name)}</td><td style="padding:6px">${esc(a.cat||'')}</td><td>${a.from}</td><td>${a.to}</td><td style="padding:6px">${esc(a.note||'')}</td><td style="padding:4px"><button data-lx="${a.id}">${armed===a.id?'Confirm':'Delete'}</button></td></tr>`).join('')||'<tr><td colspan="6" class="mu" style="padding:10px">No upcoming applications.</td></tr>'}</table></div></div>`);
+ $('#lve').onchange=e=>{lvEmp=e.target.value;lvDraw()};
  $('#cs').onclick=async()=>{const o={};CATS.forEach(c=>o[c]=String($('#cap_'+c).value||'0'));const x=await rpc('admin_leave_caps',{...cr(),p_caps:o});if(x.error)return toast(x.error);toast('Limits saved');lv()};
  $('#app').onclick=async e=>{const d=e.target.closest('[data-ld]');if(d){lsel=d.dataset.ld;lvDraw();return}const id=e.target.dataset.lx;if(!id)return;if(armed!==id){armed=id;lvDraw();return}armed='';const x=await rpc('admin_leave_del',{...cr(),p_id:id});if(x.error)toast(x.error);lv()}}
 
